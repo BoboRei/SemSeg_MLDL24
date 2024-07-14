@@ -1,1 +1,88 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"name":"python","version":"3.10.13","mimetype":"text/x-python","codemirror_mode":{"name":"ipython","version":3},"pygments_lexer":"ipython3","nbconvert_exporter":"python","file_extension":".py"},"kaggle":{"accelerator":"none","dataSources":[],"dockerImageVersionId":30746,"isInternetEnabled":true,"language":"python","sourceType":"script","isGpuEnabled":false}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"import pandas as pd\nimport cv2\nimport albumentations as A\nfrom albumentations.pytorch import ToTensorV2\nimport numpy as np\nimport sys\nimport os\nimport glob\nfrom PIL import Image\n\n\nclass GTA(Dataset):\n    def __init__(self, image_dir, mask_dir, transform = None, augmentation=None):\n        super(GTA, self).__init__()\n        self.image_dir = image_dir # images\n        self.mask_dir = mask_dir # gtFine\n        self.transform = transform\n        self.images = []\n\n        # Iterate over images of each city\n        for filename in os.listdir(self.image_dir):\n            self.images.append(os.path.join(self.image_dir, filename))\n\n    def __len__(self):\n        return len(self.images)\n\n    def __getitem__(self, index):\n        # Paths to images and masks\n        img_path = self.images[index]\n        mask_path = self.images[index].replace('images', 'labels')\n        \n        # load the images\n        image = cv2.imread(img_path)\n        \n        # Load the masks\n        mask = cv2.imread(mask_path)\n\n        mask = self.transform_mask(mask)\n        \n        if self.transform is not None:\n            img = self.transform(image=image, mask=mask)\n            t_image = img['image']\n            t_mask = img['mask']\n            \n        # Transform the images into tensors and normalize.\n        t = transforms.Compose([\n                                transforms.ToTensor(),\n                                transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),\n                               ])\n            \n        t_image = t(t_image)\n\n        t_mask = torch.from_numpy(t_mask).long()\n        \n        return t_image, t_mask\n    \n    def transform_mask(self,mask):\n        mapping = {\n            (128, 64, 128) : 0,\n            (244, 35, 232) : 1,\n            (70, 70, 70) : 2,\n            (102, 102, 156) : 3,\n            (190, 153, 153) : 4,\n            (153, 153, 153) : 5,\n            (250, 170, 30) : 6,\n            (220, 220, 0) : 7,\n            (107, 142, 35) : 8,\n            (152, 251, 152) : 9,\n            (70, 130, 180) : 10,\n            (220, 20, 60) : 11,\n            (255, 0, 0) : 12,\n            (0, 0, 142) : 13,\n            (0, 0, 70) : 14,\n            (0, 60, 100) : 15,\n            (0, 80, 100) : 16,\n            (0, 0, 230) : 17,\n            (119, 11, 32) : 18\n        }\n        \n        max_color_value = 255\n        lookup = np.full((max_color_value + 1, max_color_value + 1, max_color_value + 1), 255, dtype=np.uint8)\n        \n        for color, label in mapping.items():\n            lookup[color] = label\n\n        transformed_mask = lookup[mask[..., 2], mask[..., 1], mask[..., 0]]\n\n        return transformed_mask","metadata":{"_uuid":"df479e6a-20ae-41d8-ae6b-38da824504c8","_cell_guid":"04239e48-8322-4167-9369-d43e6aee25bb","collapsed":false,"jupyter":{"outputs_hidden":false},"execution":{"iopub.status.busy":"2024-07-13T08:24:15.041696Z","iopub.execute_input":"2024-07-13T08:24:15.042196Z","iopub.status.idle":"2024-07-13T08:24:15.087734Z","shell.execute_reply.started":"2024-07-13T08:24:15.042158Z","shell.execute_reply":"2024-07-13T08:24:15.086093Z"},"trusted":true},"execution_count":1,"outputs":[{"traceback":["\u001b[0;36m  Cell \u001b[0;32mIn[1], line 1\u001b[0;36m\u001b[0m\n\u001b[0;31m    class CityScapes(Dataset):\u001b[0m\n\u001b[0m                              ^\u001b[0m\n\u001b[0;31mSyntaxError\u001b[0m\u001b[0;31m:\u001b[0m incomplete input\n"],"ename":"SyntaxError","evalue":"incomplete input (3614990204.py, line 1)","output_type":"error"}]}]}
+import pandas as pd
+import cv2
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import numpy as np
+import sys
+import os
+import glob
+from PIL import Image
+
+
+class GTA(Dataset):
+    def __init__(self, image_dir, mask_dir, transform = None, augmentation=None):
+        super(GTA, self).__init__()
+        self.image_dir = image_dir # images
+        self.mask_dir = mask_dir # gtFine
+        self.transform = transform
+        self.images = []
+
+        # Iterate over images of each city
+        for filename in os.listdir(self.image_dir):
+            self.images.append(os.path.join(self.image_dir, filename))
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, index):
+        # Paths to images and masks
+        img_path = self.images[index]
+        mask_path = self.images[index].replace('images', 'labels')
+        
+        # load the images
+        image = cv2.imread(img_path)
+        
+        # Load the masks
+        mask = cv2.imread(mask_path)
+
+        mask = self.transform_mask(mask)
+        
+        if self.transform is not None:
+            img = self.transform(image=image, mask=mask)
+            t_image = img['image']
+            t_mask = img['mask']
+            
+        # Transform the images into tensors and normalize.
+        t = transforms.Compose([
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                               ])
+            
+        t_image = t(t_image)
+
+        t_mask = torch.from_numpy(t_mask).long()
+        
+        return t_image, t_mask
+    
+    def transform_mask(self,mask):
+        mapping = {
+            (128, 64, 128) : 0,
+            (244, 35, 232) : 1,
+            (70, 70, 70) : 2,
+            (102, 102, 156) : 3,
+            (190, 153, 153) : 4,
+            (153, 153, 153) : 5,
+            (250, 170, 30) : 6,
+            (220, 220, 0) : 7,
+            (107, 142, 35) : 8,
+            (152, 251, 152) : 9,
+            (70, 130, 180) : 10,
+            (220, 20, 60) : 11,
+            (255, 0, 0) : 12,
+            (0, 0, 142) : 13,
+            (0, 0, 70) : 14,
+            (0, 60, 100) : 15,
+            (0, 80, 100) : 16,
+            (0, 0, 230) : 17,
+            (119, 11, 32) : 18
+        }
+        
+        max_color_value = 255
+        lookup = np.full((max_color_value + 1, max_color_value + 1, max_color_value + 1), 255, dtype=np.uint8)
+        
+        for color, label in mapping.items():
+            lookup[color] = label
+
+        transformed_mask = lookup[mask[..., 2], mask[..., 1], mask[..., 0]]
+
+        return transformed_mask

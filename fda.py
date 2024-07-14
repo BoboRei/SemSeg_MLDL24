@@ -1,1 +1,44 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"pygments_lexer":"ipython3","nbconvert_exporter":"python","version":"3.6.4","file_extension":".py","codemirror_mode":{"name":"ipython","version":3},"name":"python","mimetype":"text/x-python"},"kaggle":{"accelerator":"none","dataSources":[],"isInternetEnabled":true,"language":"python","sourceType":"script","isGpuEnabled":false}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"import torch\nimport numpy as np\n\ndef extract_ampl_phase(fft_im):\n    fft_real = fft_im.real\n    fft_imag = fft_im.imag\n    fft_amp = torch.sqrt(fft_real**2 + fft_imag**2)\n    fft_pha = torch.atan2(fft_imag, fft_real)\n    return fft_amp, fft_pha\n\ndef low_freq_mutate(amp_src, amp_trg, beta=0.1):\n    _, _, h, w = amp_src.size()\n    b = int(np.floor(min(h, w) * beta))\n    amp_src[:, :, :b, :b] = amp_trg[:, :, :b, :b]\n    amp_src[:, :, :b, -b:] = amp_trg[:, :, :b, -b:]\n    amp_src[:, :, -b:, :b] = amp_trg[:, :, -b:, :b]\n    amp_src[:, :, -b:, -b:] = amp_trg[:, :, -b:, -b:]\n    return amp_src\n\ndef FDA_source_to_target(src_img, trg_img, beta=0.1):\n    if trg_img.size(0) < src_img.size(0):\n        trg_img = trg_img[:src_img.size(0)]\n    \n    # Get fft of both source and target\n    fft_src = torch.fft.rfft2(src_img, dim=(-2, -1))\n    fft_trg = torch.fft.rfft2(trg_img, dim=(-2, -1))\n\n    # Extract amplitude and phase of both ffts\n    amp_src, pha_src = extract_ampl_phase(fft_src)\n    amp_trg, _ = extract_ampl_phase(fft_trg)\n\n    # Troncare amp_trg se necessario\n    if amp_trg.size(0) != amp_src.size(0):\n        amp_trg = amp_trg[:amp_src.size(0)]\n\n    # Replace the low frequency amplitude part of source with that from target\n    amp_src_ = low_freq_mutate(amp_src, amp_trg, beta=beta)\n\n    # Recompose fft of source\n    fft_src_ = torch.polar(amp_src_, pha_src)\n\n    # Get the recomposed image: source content, target style\n    src_in_trg = torch.fft.irfft2(fft_src_, s=src_img.shape[-2:])\n    return src_in_trg","metadata":{"_uuid":"8f2839f25d086af736a60e9eeb907d3b93b6e0e5","_cell_guid":"b1076dfc-b9ad-4769-8c92-a6c4dae69d19","trusted":true},"execution_count":null,"outputs":[]}]}
+import torch
+import numpy as np
+
+def extract_ampl_phase(fft_im):
+    fft_real = fft_im.real
+    fft_imag = fft_im.imag
+    fft_amp = torch.sqrt(fft_real**2 + fft_imag**2)
+    fft_pha = torch.atan2(fft_imag, fft_real)
+    return fft_amp, fft_pha
+
+def low_freq_mutate(amp_src, amp_trg, beta=0.1):
+    _, _, h, w = amp_src.size()
+    b = int(np.floor(min(h, w) * beta))
+    amp_src[:, :, :b, :b] = amp_trg[:, :, :b, :b]
+    amp_src[:, :, :b, -b:] = amp_trg[:, :, :b, -b:]
+    amp_src[:, :, -b:, :b] = amp_trg[:, :, -b:, :b]
+    amp_src[:, :, -b:, -b:] = amp_trg[:, :, -b:, -b:]
+    return amp_src
+
+def FDA_source_to_target(src_img, trg_img, beta=0.1):
+    if trg_img.size(0) < src_img.size(0):
+        trg_img = trg_img[:src_img.size(0)]
+    
+    # Get fft of both source and target
+    fft_src = torch.fft.rfft2(src_img, dim=(-2, -1))
+    fft_trg = torch.fft.rfft2(trg_img, dim=(-2, -1))
+
+    # Extract amplitude and phase of both ffts
+    amp_src, pha_src = extract_ampl_phase(fft_src)
+    amp_trg, _ = extract_ampl_phase(fft_trg)
+
+    # Troncare amp_trg se necessario
+    if amp_trg.size(0) != amp_src.size(0):
+        amp_trg = amp_trg[:amp_src.size(0)]
+
+    # Replace the low frequency amplitude part of source with that from target
+    amp_src_ = low_freq_mutate(amp_src, amp_trg, beta=beta)
+
+    # Recompose fft of source
+    fft_src_ = torch.polar(amp_src_, pha_src)
+
+    # Get the recomposed image: source content, target style
+    src_in_trg = torch.fft.irfft2(fft_src_, s=src_img.shape[-2:])
+    return src_in_trg

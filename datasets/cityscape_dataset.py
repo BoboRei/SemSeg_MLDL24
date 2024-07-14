@@ -1,1 +1,57 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"name":"python","version":"3.10.13","mimetype":"text/x-python","codemirror_mode":{"name":"ipython","version":3},"pygments_lexer":"ipython3","nbconvert_exporter":"python","file_extension":".py"},"kaggle":{"accelerator":"none","dataSources":[],"dockerImageVersionId":30746,"isInternetEnabled":true,"language":"python","sourceType":"script","isGpuEnabled":false}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"import pandas as pd\nimport cv2\nimport albumentations as A\nfrom albumentations.pytorch import ToTensorV2\nimport numpy as np\nimport sys\nimport os\nimport glob\nfrom PIL import Image\n\n\nclass CityScapes(Dataset):\n    def __init__(self, image_dir, mask_dir, transform=None):\n        super(CityScapes, self).__init__()\n        self.image_dir = image_dir # images\n        self.mask_dir = mask_dir # gtFine\n        self.transform = transform\n        self.images = []\n\n        # Save all the train images paths\n        for city_dir in os.listdir(image_dir):\n            city_path = os.path.join(image_dir, city_dir)\n            # Check if is a directory\n            if os.path.isdir(city_path):\n                # Iterate over images of each city\n                for filename in os.listdir(city_path):\n                    self.images.append(os.path.join(city_path, filename))\n\n    def __len__(self):\n        return len(self.images)\n\n    def __getitem__(self, index):\n        # Paths to images and masks\n        img_path = self.images[index]\n        mask_path = self.images[index].replace('images', 'gtFine').replace('leftImg8bit', 'gtFine_labelTrainIds')\n        \n        # load the images\n        image = cv2.imread(img_path)\n\n        # Load the masks\n        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)\n        \n        if self.transform is not None:\n            img = self.transform(image=image)\n            msk = self.transform(image=mask)\n            t_image = img['image']\n            t_mask = msk['image']\n            \n        t = transforms.Compose([\n                                transforms.ToTensor(),\n                                transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))\n                               ])\n        t_image = t(t_image)\n\n        t_mask = torch.from_numpy(t_mask).long()\n        \n        return t_image, t_mask","metadata":{"_uuid":"df479e6a-20ae-41d8-ae6b-38da824504c8","_cell_guid":"04239e48-8322-4167-9369-d43e6aee25bb","collapsed":false,"jupyter":{"outputs_hidden":false},"execution":{"iopub.status.busy":"2024-07-13T08:24:15.041696Z","iopub.execute_input":"2024-07-13T08:24:15.042196Z","iopub.status.idle":"2024-07-13T08:24:15.087734Z","shell.execute_reply.started":"2024-07-13T08:24:15.042158Z","shell.execute_reply":"2024-07-13T08:24:15.086093Z"},"trusted":true},"execution_count":1,"outputs":[{"traceback":["\u001b[0;36m  Cell \u001b[0;32mIn[1], line 1\u001b[0;36m\u001b[0m\n\u001b[0;31m    class CityScapes(Dataset):\u001b[0m\n\u001b[0m                              ^\u001b[0m\n\u001b[0;31mSyntaxError\u001b[0m\u001b[0;31m:\u001b[0m incomplete input\n"],"ename":"SyntaxError","evalue":"incomplete input (3614990204.py, line 1)","output_type":"error"}]}]}
+import pandas as pd
+import cv2
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import numpy as np
+import sys
+import os
+import glob
+from PIL import Image
+
+
+class CityScapes(Dataset):
+    def __init__(self, image_dir, mask_dir, transform=None):
+        super(CityScapes, self).__init__()
+        self.image_dir = image_dir # images
+        self.mask_dir = mask_dir # gtFine
+        self.transform = transform
+        self.images = []
+
+        # Save all the train images paths
+        for city_dir in os.listdir(image_dir):
+            city_path = os.path.join(image_dir, city_dir)
+            # Check if is a directory
+            if os.path.isdir(city_path):
+                # Iterate over images of each city
+                for filename in os.listdir(city_path):
+                    self.images.append(os.path.join(city_path, filename))
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, index):
+        # Paths to images and masks
+        img_path = self.images[index]
+        mask_path = self.images[index].replace('images', 'gtFine').replace('leftImg8bit', 'gtFine_labelTrainIds')
+        
+        # load the images
+        image = cv2.imread(img_path)
+
+        # Load the masks
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        
+        if self.transform is not None:
+            img = self.transform(image=image)
+            msk = self.transform(image=mask)
+            t_image = img['image']
+            t_mask = msk['image']
+            
+        t = transforms.Compose([
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+                               ])
+        t_image = t(t_image)
+
+        t_mask = torch.from_numpy(t_mask).long()
+        
+        return t_image, t_mask
